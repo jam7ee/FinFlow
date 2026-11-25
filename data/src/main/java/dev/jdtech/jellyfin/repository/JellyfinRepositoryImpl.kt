@@ -336,7 +336,7 @@ class JellyfinRepositoryImpl(
                     )
                 } else {
                     DeviceProfile(
-                        name = "Findroid Bitrate",
+                        name = "FinFlow",
                         maxStaticBitrate = effectiveBitrate,
                         maxStreamingBitrate = effectiveBitrate,
                         codecProfiles = emptyList(),

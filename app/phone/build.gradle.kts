@@ -20,7 +20,7 @@ android {
     buildToolsVersion = Versions.BUILD_TOOLS
 
     defaultConfig {
-        applicationId = "dev.jdtech.jellyfin.bitrate"
+        applicationId = "io.github.jam7ee.finflow"
         minSdk = Versions.MIN_SDK
         targetSdk = Versions.TARGET_SDK
 
@@ -91,7 +91,7 @@ androidComponents {
                     .firstOrNull { it.filterType == FilterConfiguration.FilterType.ABI }
                     ?.identifier
             output.outputFileName.set(
-                "findroid-v${output.versionName.get()}-${variant.flavorName}-$abi.apk",
+                "finflow-v${output.versionName.get()}-${variant.flavorName}-$abi.apk",
             )
         }
     }
