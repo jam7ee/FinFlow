@@ -372,9 +372,9 @@ class JellyfinRepositoryImpl(
                                 SubtitleProfile("webvtt", SubtitleDeliveryMethod.EXTERNAL),
                                 SubtitleProfile("ttml", SubtitleDeliveryMethod.EXTERNAL),
                                 SubtitleProfile("smi", SubtitleDeliveryMethod.EXTERNAL),
-                                SubtitleProfile("pgssub", SubtitleDeliveryMethod.ENCODE),
-                                SubtitleProfile("dvdsub", SubtitleDeliveryMethod.ENCODE),
-                                SubtitleProfile("dvbsub", SubtitleDeliveryMethod.ENCODE),
+                                SubtitleProfile("pgssub", SubtitleDeliveryMethod.DROP),
+                                SubtitleProfile("dvdsub", SubtitleDeliveryMethod.DROP),
+                                SubtitleProfile("dvbsub", SubtitleDeliveryMethod.DROP),
                             ),
                     )
                 }
@@ -386,8 +386,11 @@ class JellyfinRepositoryImpl(
                             userId = jellyfinApi.userId!!,
                             maxStreamingBitrate = effectiveBitrate ?: 1_000_000_000,
                             audioStreamIndex = audioStreamIndex,
+                            subtitleStreamIndex = if (effectiveBitrate != null) -1 else null,
                             mediaSourceId = mediaSourceId,
                             deviceProfile = deviceProfile,
+                            alwaysBurnInSubtitleWhenTranscoding =
+                                if (effectiveBitrate != null) false else null,
                         ),
                     )
                     .content
