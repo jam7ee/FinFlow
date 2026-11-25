@@ -14,6 +14,28 @@
         <item>exoplayer</item>
         <item>mpv</item>
     </string-array>
+    <string-array name="max_bitrate">
+        <item>@string/bitrate_original</item>
+        <item>40 Mbps</item>
+        <item>20 Mbps</item>
+        <item>12 Mbps</item>
+        <item>8 Mbps</item>
+        <item>4 Mbps</item>
+        <item>2 Mbps</item>
+        <item>1.5 Mbps</item>
+        <item>1 Mbps</item>
+    </string-array>
+    <string-array name="max_bitrate_values">
+        <item>0</item>
+        <item>40000000</item>
+        <item>20000000</item>
+        <item>12000000</item>
+        <item>8000000</item>
+        <item>4000000</item>
+        <item>2000000</item>
+        <item>1500000</item>
+        <item>1000000</item>
+    </string-array>
     <string-array name="mpv_hwdec">
         <item>no</item>
         <item>mediacodec</item>

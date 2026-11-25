@@ -9,6 +9,7 @@ import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.FindroidSources
 import dev.jdtech.jellyfin.player.core.domain.models.ExternalSubtitle
+import dev.jdtech.jellyfin.player.core.domain.models.PlayerAudioStream
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerItem
 import dev.jdtech.jellyfin.player.core.domain.models.TrickplayInfo
@@ -18,6 +19,7 @@ import javax.inject.Inject
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.MediaStreamType
+import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import timber.log.Timber
 
 class PlaylistManager @Inject internal constructor(private val repository: JellyfinRepository) {
@@ -25,6 +27,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
     private var items: List<FindroidItem> = emptyList()
     private val playerItems: MutableList<PlayerItem> = mutableListOf()
     var currentItemIndex: Int = 0
+    var maxBitrate: Int = 0
 
     suspend fun getInitialItem(
         itemId: UUID,
@@ -200,37 +203,109 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         currentItemIndex = items.indexOfFirst { it.id == itemId }
     }
 
+    suspend fun reloadCurrentItem(
+        itemId: UUID,
+        mediaSourceId: String,
+        playbackPosition: Long,
+        audioStreamIndex: Int? = null,
+    ): PlayerItem? {
+        val item = items.firstOrNull { it.id == itemId } ?: return null
+        val reloadedItem =
+            item.toPlayerItem(
+                mediaSourceIndex = null,
+                playbackPosition = playbackPosition,
+                mediaSourceId = mediaSourceId,
+                audioStreamIndex = audioStreamIndex,
+            )
+        playerItems.clear()
+        playerItems.add(reloadedItem)
+        return reloadedItem
+    }
+
     private suspend fun FindroidItem.toPlayerItem(
         mediaSourceIndex: Int?,
         playbackPosition: Long,
+        mediaSourceId: String? = null,
+        audioStreamIndex: Int? = null,
     ): PlayerItem {
         Timber.d("Converting FindroidItem ${this.id} to PlayerItem")
 
-        val mediaSources = repository.getMediaSources(id, true)
+        val mediaSources =
+            repository.getMediaSources(
+                id,
+                includePath = true,
+                maxBitrate = maxBitrate.takeIf { it > 0 },
+                audioStreamIndex = audioStreamIndex,
+                mediaSourceId = mediaSourceId,
+            )
         val mediaSource =
-            if (mediaSourceIndex == null) {
-                mediaSources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: mediaSources[0]
-            } else {
-                mediaSources[mediaSourceIndex]
+            when {
+                mediaSourceId != null -> {
+                    mediaSources.firstOrNull {
+                        it.id == mediaSourceId && it.type == FindroidSourceType.REMOTE
+                    }
+                        ?: mediaSources.firstOrNull { it.id == mediaSourceId }
+                        ?: mediaSources[0]
+                }
+                mediaSourceIndex == null -> {
+                    mediaSources.firstOrNull { it.type == FindroidSourceType.LOCAL }
+                        ?: mediaSources[0]
+                }
+                else -> {
+                    mediaSources[mediaSourceIndex]
+                }
             }
         val externalSubtitles =
             mediaSource.mediaStreams
                 .filter { mediaStream ->
-                    mediaStream.isExternal &&
+                    val isExternalDelivery =
+                        if (mediaSource.isTranscoding) {
+                            mediaStream.isExternal ||
+                                mediaStream.deliveryMethod == SubtitleDeliveryMethod.EXTERNAL
+                        } else {
+                            mediaStream.isExternal
+                        }
+                    isExternalDelivery &&
                         mediaStream.type == MediaStreamType.SUBTITLE &&
                         !mediaStream.path.isNullOrBlank()
                 }
                 .map { mediaStream ->
+                    val subtitleTitle =
+                        mediaStream.displayTitle?.ifBlank { mediaStream.title } ?: mediaStream.title
                     ExternalSubtitle(
-                        mediaStream.title,
+                        subtitleTitle,
                         mediaStream.language,
                         mediaStream.path!!.toUri(),
-                        when (mediaStream.codec) {
-                            "subrip" -> MimeTypes.APPLICATION_SUBRIP
-                            "webvtt" -> MimeTypes.APPLICATION_SUBRIP
-                            "ass" -> MimeTypes.TEXT_SSA
+                        when (mediaStream.codec.lowercase()) {
+                            "subrip",
+                            "srt" -> MimeTypes.APPLICATION_SUBRIP
+                            "webvtt",
+                            "vtt" -> MimeTypes.TEXT_VTT
+                            "ass",
+                            "ssa" -> MimeTypes.TEXT_SSA
+                            "ttml" -> MimeTypes.APPLICATION_TTML
                             else -> MimeTypes.TEXT_UNKNOWN
                         },
+                    )
+                }
+        val audioStreams =
+            mediaSource.mediaStreams
+                .filter { it.type == MediaStreamType.AUDIO && it.index >= 0 }
+                .map { stream ->
+                    val fallbackTitle =
+                        listOfNotNull(
+                                stream.language.ifBlank { null },
+                                stream.codec.ifBlank { null }?.uppercase(),
+                                stream.channelLayout?.ifBlank { null },
+                            )
+                            .joinToString(" - ")
+                    PlayerAudioStream(
+                        index = stream.index,
+                        displayTitle =
+                            stream.displayTitle?.ifBlank { null }
+                                ?: stream.title.ifBlank { fallbackTitle },
+                        language = stream.language,
+                        codec = stream.codec,
                     )
                 }
         val trickplayInfo =
@@ -262,6 +337,12 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             externalSubtitles = externalSubtitles,
             chapters = chapters.toPlayerChapters(),
             trickplayInfo = trickplayInfo,
+            playSessionId = mediaSource.playSessionId,
+            isTranscoding = mediaSource.isTranscoding,
+            isLocal = mediaSource.type == FindroidSourceType.LOCAL,
+            sourceBitrate = mediaSource.bitrate,
+            audioStreams = audioStreams,
+            selectedAudioStreamIndex = audioStreamIndex ?: mediaSource.defaultAudioStreamIndex,
         )
     }
 

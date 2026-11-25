@@ -4,6 +4,11 @@
     <string name="select_audio_track">选择音轨</string>
     <string name="select_subtitle_track">选择字幕轨</string>
     <string name="select_playback_speed">选择播放速度</string>
+    <string name="select_bitrate">选择码率</string>
+    <string name="player_bitrate_original">原画</string>
+    <string name="bitrate_original_with_value">原画 (%1$s)</string>
+    <string name="bitrate_mode_direct">原画直播</string>
+    <string name="bitrate_mode_transcode">转码中</string>
     <string name="external">外部</string>
     <string name="player_controls_exit">退出播放器</string>
     <string name="player_controls_rewind">快退</string>

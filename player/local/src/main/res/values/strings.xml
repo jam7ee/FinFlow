@@ -2,6 +2,11 @@
     <string name="select_audio_track">Select audio track</string>
     <string name="select_subtitle_track">Select subtitle track</string>
     <string name="select_playback_speed">Select playback speed</string>
+    <string name="select_bitrate">Select bitrate</string>
+    <string name="player_bitrate_original">Original</string>
+    <string name="bitrate_original_with_value">Original (%1$s)</string>
+    <string name="bitrate_mode_direct">Direct Play</string>
+    <string name="bitrate_mode_transcode">Transcoding</string>
     <string name="select_a_version">"Select a version"</string>
     <string name="external">External</string>
     <string name="none">None</string>

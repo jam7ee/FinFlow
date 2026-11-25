@@ -24,6 +24,32 @@ class TrackSelectionDialogFragment(
                 C.TRACK_TYPE_TEXT -> R.string.select_subtitle_track
                 else -> throw IllegalStateException("TrackType must be AUDIO or TEXT")
             }
+        if (
+            type == C.TRACK_TYPE_AUDIO &&
+                viewModel.isCurrentItemTranscoding() &&
+                viewModel.getCurrentAudioStreams().isNotEmpty()
+        ) {
+            val audioStreams = viewModel.getCurrentAudioStreams()
+            val selectedIndex = viewModel.getSelectedAudioStreamIndex()
+            val checkedItem =
+                audioStreams
+                    .indexOfFirst { it.index == selectedIndex }
+                    .let { if (it >= 0) it else 0 }
+            return activity?.let { activity ->
+                val builder = MaterialAlertDialogBuilder(activity)
+                builder
+                    .setTitle(getString(titleResource))
+                    .setSingleChoiceItems(
+                        audioStreams.map { it.displayTitle }.toTypedArray(),
+                        checkedItem,
+                    ) { dialog, which ->
+                        viewModel.selectTranscodeAudioStream(audioStreams[which].index)
+                        dialog.dismiss()
+                    }
+                builder.create()
+            } ?: throw IllegalStateException("Activity cannot be null")
+        }
+
         val tracksGroups =
             viewModel.player.currentTracks.groups.filter { it.type == type && it.isSupported }
         return activity?.let { activity ->

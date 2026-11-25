@@ -391,6 +391,30 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                                             ),
                                     ),
                                     PreferenceGroup(
+                                        nameStringResource = R.string.streaming_quality,
+                                        preferences =
+                                            listOf(
+                                                PreferenceSelect(
+                                                    nameStringResource =
+                                                        R.string.pref_player_max_bitrate_wifi,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.playerMaxBitrateWifi,
+                                                    options = R.array.max_bitrate,
+                                                    optionValues = R.array.max_bitrate_values,
+                                                ),
+                                                PreferenceSelect(
+                                                    nameStringResource =
+                                                        R.string.pref_player_max_bitrate_mobile,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.playerMaxBitrateMobile,
+                                                    options = R.array.max_bitrate,
+                                                    optionValues = R.array.max_bitrate_values,
+                                                ),
+                                            ),
+                                    ),
+                                    PreferenceGroup(
                                         nameStringResource = R.string.gestures,
                                         preferences =
                                             listOf(

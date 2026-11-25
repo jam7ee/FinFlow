@@ -1,8 +1,11 @@
 package dev.jdtech.jellyfin.player.local.presentation
 
 import android.app.Application
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -11,6 +14,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -19,6 +23,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.models.FindroidSegmentType
+import dev.jdtech.jellyfin.player.core.domain.models.PlayerAudioStream
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerItem
 import dev.jdtech.jellyfin.player.core.domain.models.Trickplay
@@ -43,6 +48,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.PlayMethod
 import timber.log.Timber
 
 @HiltViewModel
@@ -80,6 +86,10 @@ constructor(
         val currentTrickplay: Trickplay?,
         val currentChapters: List<PlayerChapter>,
         val fileLoaded: Boolean,
+        val selectedBitrate: Int = 0,
+        val sourceBitrate: Int? = null,
+        val isTranscoding: Boolean = false,
+        val isLocal: Boolean = false,
     )
 
     private var items: MutableList<PlayerItem> = mutableListOf()
@@ -99,6 +109,7 @@ constructor(
     private var segmentsAutoSkipMode: String = "always"
 
     var playbackSpeed: Float = 1f
+    var selectedBitrate: Int = 0
 
     var isInPictureInPictureMode: Boolean = false
 
@@ -174,10 +185,46 @@ constructor(
             }
     }
 
+    private fun resolveDefaultBitrate(): Int {
+        val isWifiOrUnmetered =
+            try {
+                val cm =
+                    application.getSystemService(Context.CONNECTIVITY_SERVICE)
+                        as ConnectivityManager
+                val network = cm.activeNetwork
+                val caps = network?.let { cm.getNetworkCapabilities(it) }
+                if (caps == null) {
+                    true
+                } else {
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ||
+                        (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) &&
+                            !caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
+                }
+            } catch (_: Exception) {
+                true
+            }
+        val raw =
+            if (isWifiOrUnmetered) {
+                appPreferences.getValue(appPreferences.playerMaxBitrateWifi)
+            } else {
+                appPreferences.getValue(appPreferences.playerMaxBitrateMobile)
+            }
+        return raw?.toIntOrNull() ?: 0
+    }
+
+    private fun currentPlayerItem(): PlayerItem? {
+        return items.getOrNull(player.currentMediaItemIndex)
+            ?: items.firstOrNull { it.itemId.toString() == player.currentMediaItem?.mediaId }
+    }
+
     fun initializePlayer(itemId: UUID, itemKind: String, startFromBeginning: Boolean) {
         player.addListener(this)
 
         viewModelScope.launch {
+            selectedBitrate = resolveDefaultBitrate()
+            playlistManager.maxBitrate = selectedBitrate
+
             val startItem =
                 try {
                     playlistManager.getInitialItem(
@@ -235,19 +282,21 @@ constructor(
         }
 
         Timber.d("Stream url: $streamUrl")
-        val mediaItem =
+        val builder =
             MediaItem.Builder()
                 .setMediaId(itemId.toString())
                 .setUri(streamUrl)
                 .setMediaMetadata(MediaMetadata.Builder().setTitle(name).build())
                 .setSubtitleConfigurations(mediaSubtitles)
-                .build()
-
-        return mediaItem
+        if (isTranscoding) {
+            builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+        }
+        return builder.build()
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun releasePlayer() {
+        val currentItem = currentPlayerItem()
         val mediaId = player.currentMediaItem?.mediaId
         val position = player.currentPosition
         val duration = player.duration
@@ -260,6 +309,8 @@ constructor(
                         UUID.fromString(mediaId),
                         position.times(10000),
                         position.div(duration.toFloat()).times(100).toInt(),
+                        mediaSourceId = currentItem?.mediaSourceId,
+                        playSessionId = currentItem?.playSessionId,
                     )
                 }
             } catch (e: Exception) {
@@ -281,11 +332,20 @@ constructor(
             savedStateHandle["position"] = player.currentPosition
             if (player.currentMediaItem != null && player.currentMediaItem!!.mediaId.isNotEmpty()) {
                 val itemId = UUID.fromString(player.currentMediaItem!!.mediaId)
+                val currentItem = currentPlayerItem()
                 try {
                     repository.postPlaybackProgress(
                         itemId,
                         player.currentPosition.times(10000),
                         !player.isPlaying,
+                        mediaSourceId = currentItem?.mediaSourceId,
+                        playSessionId = currentItem?.playSessionId,
+                        playMethod =
+                            if (currentItem?.isTranscoding == true) {
+                                PlayMethod.TRANSCODE
+                            } else {
+                                PlayMethod.DIRECT_PLAY
+                            },
                     )
                 } catch (e: Exception) {
                     Timber.e(e)
@@ -365,10 +425,24 @@ constructor(
                                 currentSegment = null,
                                 currentChapters = item.chapters,
                                 fileLoaded = false,
+                                selectedBitrate = selectedBitrate,
+                                sourceBitrate = item.sourceBitrate,
+                                isTranscoding = item.isTranscoding,
+                                isLocal = item.isLocal,
                             )
                         }
 
-                        repository.postPlaybackStart(item.itemId)
+                        repository.postPlaybackStart(
+                            item.itemId,
+                            mediaSourceId = item.mediaSourceId,
+                            playSessionId = item.playSessionId,
+                            playMethod =
+                                if (item.isTranscoding) {
+                                    PlayMethod.TRANSCODE
+                                } else {
+                                    PlayMethod.DIRECT_PLAY
+                                },
+                        )
 
                         if (segmentsSkipButton || segmentsAutoSkip) {
                             getSegments(item.itemId)
@@ -414,6 +488,7 @@ constructor(
                 player.playbackState == ExoPlayer.STATE_READY
         ) {
             viewModelScope.launch {
+                val currentItem = currentPlayerItem()
                 val mediaId = player.currentMediaItem?.mediaId
                 val position = player.currentPosition
                 val duration = player.duration
@@ -422,6 +497,8 @@ constructor(
                         UUID.fromString(mediaId),
                         position.times(10000),
                         position.div(duration.toFloat()).times(100).toInt(),
+                        mediaSourceId = currentItem?.mediaSourceId,
+                        playSessionId = currentItem?.playSessionId,
                     )
                 } catch (e: Exception) {
                     Timber.e(e)
@@ -443,6 +520,9 @@ constructor(
             }
             ExoPlayer.STATE_READY -> {
                 stateString = "ExoPlayer.STATE_READY     -"
+                if (playbackSpeed != 1f) {
+                    player.setPlaybackSpeed(playbackSpeed)
+                }
                 _uiState.update { it.copy(fileLoaded = true) }
             }
             ExoPlayer.STATE_ENDED -> {
@@ -488,6 +568,94 @@ constructor(
     fun selectSpeed(speed: Float) {
         player.setPlaybackSpeed(speed)
         playbackSpeed = speed
+    }
+
+    fun isCurrentItemTranscoding(): Boolean = currentPlayerItem()?.isTranscoding == true
+
+    fun getCurrentAudioStreams(): List<PlayerAudioStream> =
+        currentPlayerItem()?.audioStreams.orEmpty()
+
+    fun getSelectedAudioStreamIndex(): Int? = currentPlayerItem()?.selectedAudioStreamIndex
+
+    fun selectBitrate(maxBitrate: Int) {
+        if (maxBitrate == selectedBitrate) return
+        reloadCurrentStream(
+            newMaxBitrate = maxBitrate,
+            newAudioStreamIndex = currentPlayerItem()?.selectedAudioStreamIndex,
+        )
+    }
+
+    fun selectTranscodeAudioStream(audioStreamIndex: Int) {
+        reloadCurrentStream(
+            newMaxBitrate = selectedBitrate,
+            newAudioStreamIndex = audioStreamIndex,
+        )
+    }
+
+    private fun reloadCurrentStream(newMaxBitrate: Int, newAudioStreamIndex: Int?) {
+        val currentItem = currentPlayerItem() ?: return
+        if (currentItem.isLocal) return
+
+        val savedPosition = player.currentPosition.coerceAtLeast(0L)
+        val duration = player.duration
+        val wasPlaying = player.playWhenReady
+        val savedSpeed = playbackSpeed
+
+        selectedBitrate = newMaxBitrate
+        playlistManager.maxBitrate = newMaxBitrate
+        _uiState.update { it.copy(selectedBitrate = newMaxBitrate, fileLoaded = false) }
+
+        viewModelScope.launch {
+            if (currentItem.isTranscoding && currentItem.playSessionId != null) {
+                try {
+                    val percentage =
+                        if (duration > 0L && duration != C.TIME_UNSET) {
+                            (savedPosition.toFloat() / duration * 100).toInt()
+                        } else {
+                            0
+                        }
+                    repository.postPlaybackStop(
+                        currentItem.itemId,
+                        savedPosition.times(10000),
+                        percentage,
+                        mediaSourceId = currentItem.mediaSourceId,
+                        playSessionId = currentItem.playSessionId,
+                    )
+                } catch (e: Exception) {
+                    Timber.e(e)
+                }
+            }
+
+            val reloadedItem =
+                try {
+                    playlistManager.reloadCurrentItem(
+                        itemId = currentItem.itemId,
+                        mediaSourceId = currentItem.mediaSourceId,
+                        playbackPosition = savedPosition,
+                        audioStreamIndex = newAudioStreamIndex,
+                    )
+                } catch (e: Exception) {
+                    Timber.e(e)
+                    Toast.makeText(application, e.localizedMessage, Toast.LENGTH_LONG).show()
+                    null
+                } ?: return@launch
+
+            items = mutableListOf(reloadedItem)
+            currentMediaItemIndex = 0
+
+            _uiState.update {
+                it.copy(
+                    sourceBitrate = reloadedItem.sourceBitrate,
+                    isTranscoding = reloadedItem.isTranscoding,
+                    isLocal = reloadedItem.isLocal,
+                )
+            }
+
+            player.setMediaItems(listOf(reloadedItem.toMediaItem()), 0, savedPosition)
+            player.prepare()
+            player.setPlaybackSpeed(savedSpeed)
+            player.playWhenReady = wasPlaying
+        }
     }
 
     private suspend fun getSegments(itemId: UUID) {

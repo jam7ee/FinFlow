@@ -36,10 +36,14 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.DeviceOptionsDto
 import org.jellyfin.sdk.model.api.DeviceProfile
+import org.jellyfin.sdk.model.api.DirectPlayProfile
+import org.jellyfin.sdk.model.api.DlnaProfileType
+import org.jellyfin.sdk.model.api.EncodingContext
 import org.jellyfin.sdk.model.api.GeneralCommandType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
+import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
@@ -52,6 +56,7 @@ import org.jellyfin.sdk.model.api.RepeatMode
 import org.jellyfin.sdk.model.api.SortOrder as ItemSortOrder
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import org.jellyfin.sdk.model.api.SubtitleProfile
+import org.jellyfin.sdk.model.api.TranscodingProfile
 import org.jellyfin.sdk.model.api.UserConfiguration
 import timber.log.Timber
 
@@ -303,36 +308,98 @@ class JellyfinRepositoryImpl(
             }
         }
 
-    override suspend fun getMediaSources(itemId: UUID, includePath: Boolean): List<FindroidSource> =
+    override suspend fun getMediaSources(
+        itemId: UUID,
+        includePath: Boolean,
+        maxBitrate: Int?,
+        audioStreamIndex: Int?,
+        mediaSourceId: String?,
+    ): List<FindroidSource> =
         withContext(Dispatchers.IO) {
             val sources = mutableListOf<FindroidSource>()
-            sources.addAll(
+            val effectiveBitrate = maxBitrate?.takeIf { it > 0 }
+            val deviceProfile =
+                if (effectiveBitrate == null) {
+                    DeviceProfile(
+                        name = "Direct play all",
+                        maxStaticBitrate = 1_000_000_000,
+                        maxStreamingBitrate = 1_000_000_000,
+                        codecProfiles = emptyList(),
+                        containerProfiles = emptyList(),
+                        directPlayProfiles = emptyList(),
+                        transcodingProfiles = emptyList(),
+                        subtitleProfiles =
+                            listOf(
+                                SubtitleProfile("srt", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("ass", SubtitleDeliveryMethod.EXTERNAL),
+                            ),
+                    )
+                } else {
+                    DeviceProfile(
+                        name = "Findroid Bitrate",
+                        maxStaticBitrate = effectiveBitrate,
+                        maxStreamingBitrate = effectiveBitrate,
+                        codecProfiles = emptyList(),
+                        containerProfiles = emptyList(),
+                        directPlayProfiles =
+                            listOf(
+                                DirectPlayProfile(
+                                    container =
+                                        "mkv,mp4,m4v,mov,webm,ts,m2ts,avi,mpg,mpeg,flv,3gp,ogv",
+                                    type = DlnaProfileType.VIDEO,
+                                ),
+                            ),
+                        transcodingProfiles =
+                            listOf(
+                                TranscodingProfile(
+                                    container = "ts",
+                                    type = DlnaProfileType.VIDEO,
+                                    videoCodec = "h264",
+                                    audioCodec = "aac,mp3",
+                                    protocol = MediaStreamProtocol.HLS,
+                                    context = EncodingContext.STREAMING,
+                                    enableSubtitlesInManifest = false,
+                                ),
+                            ),
+                        subtitleProfiles =
+                            listOf(
+                                SubtitleProfile("srt", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("subrip", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("ass", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("ssa", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("vtt", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("webvtt", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("ttml", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("smi", SubtitleDeliveryMethod.EXTERNAL),
+                                SubtitleProfile("pgssub", SubtitleDeliveryMethod.ENCODE),
+                                SubtitleProfile("dvdsub", SubtitleDeliveryMethod.ENCODE),
+                                SubtitleProfile("dvbsub", SubtitleDeliveryMethod.ENCODE),
+                            ),
+                    )
+                }
+            val playbackInfo =
                 jellyfinApi.mediaInfoApi
                     .getPostedPlaybackInfo(
                         itemId,
                         PlaybackInfoDto(
                             userId = jellyfinApi.userId!!,
-                            deviceProfile =
-                                DeviceProfile(
-                                    name = "Direct play all",
-                                    maxStaticBitrate = 1_000_000_000,
-                                    maxStreamingBitrate = 1_000_000_000,
-                                    codecProfiles = emptyList(),
-                                    containerProfiles = emptyList(),
-                                    directPlayProfiles = emptyList(),
-                                    transcodingProfiles = emptyList(),
-                                    subtitleProfiles =
-                                        listOf(
-                                            SubtitleProfile("srt", SubtitleDeliveryMethod.EXTERNAL),
-                                            SubtitleProfile("ass", SubtitleDeliveryMethod.EXTERNAL),
-                                        ),
-                                ),
-                            maxStreamingBitrate = 1_000_000_000,
+                            maxStreamingBitrate = effectiveBitrate ?: 1_000_000_000,
+                            audioStreamIndex = audioStreamIndex,
+                            mediaSourceId = mediaSourceId,
+                            deviceProfile = deviceProfile,
                         ),
                     )
                     .content
-                    .mediaSources
-                    .map { it.toFindroidSource(this@JellyfinRepositoryImpl, itemId, includePath) },
+            sources.addAll(
+                playbackInfo.mediaSources.map {
+                    it.toFindroidSource(
+                        this@JellyfinRepositoryImpl,
+                        itemId,
+                        includePath,
+                        playbackInfo.playSessionId,
+                        effectiveBitrate,
+                    )
+                },
             )
             sources.addAll(database.getSources(itemId).map { it.toFindroidSource(database) })
             sources
@@ -417,16 +484,23 @@ class JellyfinRepositoryImpl(
         }
     }
 
-    override suspend fun postPlaybackStart(itemId: UUID) {
+    override suspend fun postPlaybackStart(
+        itemId: UUID,
+        mediaSourceId: String?,
+        playSessionId: String?,
+        playMethod: PlayMethod,
+    ) {
         Timber.d("Sending start $itemId")
         withContext(Dispatchers.IO) {
             jellyfinApi.sessionApi.reportPlaybackStart(
                 PlaybackStartInfo(
                     itemId = itemId,
+                    mediaSourceId = mediaSourceId,
+                    playSessionId = playSessionId,
                     canSeek = true,
                     isPaused = false,
                     isMuted = false,
-                    playMethod = PlayMethod.DIRECT_PLAY,
+                    playMethod = playMethod,
                     repeatMode = RepeatMode.REPEAT_NONE,
                     playbackOrder = PlaybackOrder.DEFAULT,
                 ),
@@ -438,6 +512,8 @@ class JellyfinRepositoryImpl(
         itemId: UUID,
         positionTicks: Long,
         playedPercentage: Int,
+        mediaSourceId: String?,
+        playSessionId: String?,
     ) {
         Timber.d("Sending stop $itemId")
         withContext(Dispatchers.IO) {
@@ -459,6 +535,8 @@ class JellyfinRepositoryImpl(
                 jellyfinApi.sessionApi.reportPlaybackStopped(
                     PlaybackStopInfo(
                         itemId = itemId,
+                        mediaSourceId = mediaSourceId,
+                        playSessionId = playSessionId,
                         positionTicks = positionTicks,
                         failed = false,
                     ),
@@ -473,6 +551,9 @@ class JellyfinRepositoryImpl(
         itemId: UUID,
         positionTicks: Long,
         isPaused: Boolean,
+        mediaSourceId: String?,
+        playSessionId: String?,
+        playMethod: PlayMethod,
     ) {
         Timber.d("Posting progress of $itemId, position: $positionTicks")
         withContext(Dispatchers.IO) {
@@ -481,10 +562,12 @@ class JellyfinRepositoryImpl(
                 jellyfinApi.sessionApi.reportPlaybackProgress(
                     PlaybackProgressInfo(
                         itemId = itemId,
+                        mediaSourceId = mediaSourceId,
+                        playSessionId = playSessionId,
                         canSeek = true,
                         isPaused = isPaused,
                         isMuted = false,
-                        playMethod = PlayMethod.DIRECT_PLAY,
+                        playMethod = playMethod,
                         repeatMode = RepeatMode.REPEAT_NONE,
                         playbackOrder = PlaybackOrder.DEFAULT,
                         positionTicks = positionTicks,

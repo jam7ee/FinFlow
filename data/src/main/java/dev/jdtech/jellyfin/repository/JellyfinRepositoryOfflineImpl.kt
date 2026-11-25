@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
+import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PublicSystemInfo
 import org.jellyfin.sdk.model.api.UserConfiguration
 
@@ -203,7 +204,13 @@ class JellyfinRepositoryOfflineImpl(
             items
         }
 
-    override suspend fun getMediaSources(itemId: UUID, includePath: Boolean): List<FindroidSource> =
+    override suspend fun getMediaSources(
+        itemId: UUID,
+        includePath: Boolean,
+        maxBitrate: Int?,
+        audioStreamIndex: Int?,
+        mediaSourceId: String?,
+    ): List<FindroidSource> =
         withContext(Dispatchers.IO) {
             database.getSources(itemId).map { it.toFindroidSource(database) }
         }
@@ -229,12 +236,19 @@ class JellyfinRepositoryOfflineImpl(
 
     override suspend fun postCapabilities() {}
 
-    override suspend fun postPlaybackStart(itemId: UUID) {}
+    override suspend fun postPlaybackStart(
+        itemId: UUID,
+        mediaSourceId: String?,
+        playSessionId: String?,
+        playMethod: PlayMethod,
+    ) {}
 
     override suspend fun postPlaybackStop(
         itemId: UUID,
         positionTicks: Long,
         playedPercentage: Int,
+        mediaSourceId: String?,
+        playSessionId: String?,
     ) {
         withContext(Dispatchers.IO) {
             when {
@@ -259,6 +273,9 @@ class JellyfinRepositoryOfflineImpl(
         itemId: UUID,
         positionTicks: Long,
         isPaused: Boolean,
+        mediaSourceId: String?,
+        playSessionId: String?,
+        playMethod: PlayMethod,
     ) {
         withContext(Dispatchers.IO) {
             database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, positionTicks)

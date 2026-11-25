@@ -37,6 +37,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.jdtech.jellyfin.databinding.ActivityPlayerBinding
 import dev.jdtech.jellyfin.player.local.presentation.PlayerEvents
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
+import dev.jdtech.jellyfin.presentation.player.BitrateSelectionDialogFragment
 import dev.jdtech.jellyfin.presentation.player.SpeedSelectionDialogFragment
 import dev.jdtech.jellyfin.presentation.player.TrackSelectionDialogFragment
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -134,6 +135,8 @@ class PlayerActivity : BasePlayerActivity() {
         val audioButton = binding.playerView.findViewById<ImageButton>(R.id.btn_audio_track)
         val subtitleButton = binding.playerView.findViewById<ImageButton>(R.id.btn_subtitle)
         val speedButton = binding.playerView.findViewById<ImageButton>(R.id.btn_speed)
+        val bitrateButton = binding.playerView.findViewById<ImageButton>(R.id.btn_bitrate)
+        val bitrateSpace = binding.playerView.findViewById<Space>(R.id.space_bitrate)
         skipSegmentButton = binding.playerView.findViewById(R.id.btn_skip_segment)
         val pipButton = binding.playerView.findViewById<ImageButton>(R.id.btn_pip)
         val lockButton = binding.playerView.findViewById<ImageButton>(R.id.btn_lockview)
@@ -197,6 +200,10 @@ class PlayerActivity : BasePlayerActivity() {
                                 playerControlView.setExtraAdGroupMarkers(null, null)
                             }
 
+                            // Bitrate visibility for remote vs local items
+                            bitrateButton.isVisible = !isLocal
+                            bitrateSpace.isVisible = !isLocal
+
                             // File Loaded
                             if (fileLoaded) {
                                 audioButton.isEnabled = true
@@ -207,6 +214,8 @@ class PlayerActivity : BasePlayerActivity() {
                                 subtitleButton.imageAlpha = 255
                                 speedButton.isEnabled = true
                                 speedButton.imageAlpha = 255
+                                bitrateButton.isEnabled = true
+                                bitrateButton.imageAlpha = 255
                                 pipButton.isEnabled = true
                                 pipButton.imageAlpha = 255
                             }
@@ -270,6 +279,9 @@ class PlayerActivity : BasePlayerActivity() {
         speedButton.isEnabled = false
         speedButton.imageAlpha = 75
 
+        bitrateButton.isEnabled = false
+        bitrateButton.imageAlpha = 75
+
         if (isPipSupported) {
             pipButton.isEnabled = false
             pipButton.imageAlpha = 75
@@ -309,6 +321,11 @@ class PlayerActivity : BasePlayerActivity() {
         speedButton.setOnClickListener {
             SpeedSelectionDialogFragment(viewModel)
                 .show(supportFragmentManager, "speedselectiondialog")
+        }
+
+        bitrateButton.setOnClickListener {
+            BitrateSelectionDialogFragment(viewModel)
+                .show(supportFragmentManager, "bitrateselectiondialog")
         }
 
         pipButton.setOnClickListener { pictureInPicture() }

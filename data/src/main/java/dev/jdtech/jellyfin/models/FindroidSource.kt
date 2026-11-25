@@ -15,24 +15,49 @@ data class FindroidSource(
     val size: Long,
     val mediaStreams: List<FindroidMediaStream>,
     val downloadId: Long? = null,
+    val playSessionId: String? = null,
+    val isTranscoding: Boolean = false,
+    val bitrate: Int? = null,
+    val defaultAudioStreamIndex: Int? = null,
 )
 
 suspend fun MediaSourceInfo.toFindroidSource(
     jellyfinRepository: JellyfinRepository,
     itemId: UUID,
     includePath: Boolean = false,
+    playSessionId: String? = null,
+    maxBitrate: Int? = null,
 ): FindroidSource {
+    val useTranscoding =
+        includePath &&
+            maxBitrate != null &&
+            maxBitrate > 0 &&
+            !supportsDirectPlay &&
+            !transcodingUrl.isNullOrBlank()
     val path =
-        when (protocol) {
-            MediaProtocol.FILE -> {
-                try {
-                    if (includePath) jellyfinRepository.getStreamUrl(itemId, id.orEmpty()) else ""
-                } catch (_: Exception) {
-                    ""
-                }
+        if (useTranscoding) {
+            val url = transcodingUrl!!
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                url
+            } else {
+                jellyfinRepository.getBaseUrl().trimEnd('/') + "/" + url.trimStart('/')
             }
-            MediaProtocol.HTTP -> this.path.orEmpty()
-            else -> ""
+        } else {
+            when (protocol) {
+                MediaProtocol.FILE -> {
+                    try {
+                        if (includePath) {
+                            jellyfinRepository.getStreamUrl(itemId, id.orEmpty())
+                        } else {
+                            ""
+                        }
+                    } catch (_: Exception) {
+                        ""
+                    }
+                }
+                MediaProtocol.HTTP -> this.path.orEmpty()
+                else -> ""
+            }
         }
     return FindroidSource(
         id = id.orEmpty(),
@@ -42,6 +67,10 @@ suspend fun MediaSourceInfo.toFindroidSource(
         size = size ?: 0,
         mediaStreams =
             mediaStreams?.map { it.toFindroidMediaStream(jellyfinRepository) } ?: emptyList(),
+        playSessionId = playSessionId,
+        isTranscoding = useTranscoding,
+        bitrate = bitrate,
+        defaultAudioStreamIndex = defaultAudioStreamIndex,
     )
 }
 

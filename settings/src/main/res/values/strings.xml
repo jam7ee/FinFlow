@@ -112,4 +112,8 @@
     <string name="advanced">Advanced</string>
     <string name="discard_changes_dialog_title">Discard changes?</string>
     <string name="discard_changes_dialog_text">You have unsaved changes.</string>
+    <string name="streaming_quality">Streaming quality</string>
+    <string name="pref_player_max_bitrate_wifi">Wi-Fi max bitrate</string>
+    <string name="pref_player_max_bitrate_mobile">Mobile data max bitrate</string>
+    <string name="bitrate_original">Original</string>
 </resources>

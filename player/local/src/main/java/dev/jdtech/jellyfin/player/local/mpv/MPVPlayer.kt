@@ -708,6 +708,7 @@ class MPVPlayer(
     override fun setMediaItems(mediaItems: MutableList<MediaItem>, resetPosition: Boolean) {
         mpvLib.command(arrayOf("playlist-clear"))
         mpvLib.command(arrayOf("playlist-remove", "current"))
+        oldMediaItem = null
         internalMediaItems = mediaItems
     }
 
@@ -731,6 +732,7 @@ class MPVPlayer(
     ) {
         mpvLib.command(arrayOf("playlist-clear"))
         mpvLib.command(arrayOf("playlist-remove", "current"))
+        oldMediaItem = null
         internalMediaItems = mediaItems
         initialIndex = startWindowIndex
         initialSeekTo = startPositionMs
