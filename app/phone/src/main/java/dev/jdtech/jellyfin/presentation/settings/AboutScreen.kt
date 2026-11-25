@@ -130,13 +130,12 @@ fun AboutScreen(navigateBack: () -> Unit) {
                             Row(
                                 horizontalArrangement =
                                     Arrangement.spacedBy(MaterialTheme.spacings.small),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 FilledTonalIconButton(
                                     onClick = {
                                         try {
-                                            uriHandler.openUri(
-                                                "https://github.com/jam7ee/findroid-Bitrate",
-                                            )
+                                            uriHandler.openUri("https://github.com/jam7ee/FinFlow")
                                         } catch (e: IllegalArgumentException) {
                                             Toast.makeText(
                                                     context,
@@ -173,6 +172,11 @@ fun AboutScreen(navigateBack: () -> Unit) {
                                         contentDescription = null,
                                     )
                                 }
+                                Text(
+                                    text = stringResource(CoreR.string.tribute_to_findroid),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                             Spacer(Modifier.height(MaterialTheme.spacings.small))
                         }

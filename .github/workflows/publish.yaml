@@ -26,28 +26,52 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      # To publish signed release builds later, configure a keystore in repository secrets
-      # and switch to :app:phone:assembleRelease.
-      - name: Build phone APKs
-        run: ./gradlew :app:phone:assembleDebug
+      - name: Decode release keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.FINFLOW_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.FINFLOW_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FINFLOW_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.FINFLOW_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASS" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASS" ]; then
+            echo "Missing signing secrets. Configure FINFLOW_KEYSTORE_BASE64, FINFLOW_KEYSTORE_PASSWORD, FINFLOW_KEY_ALIAS, and FINFLOW_KEY_PASSWORD in repository secrets."
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "${RUNNER_TEMP}/finflow-release.jks"
 
-      - name: Prepare release artifacts
+      - name: Build signed release phone APKs
+        env:
+          FINFLOW_KEYSTORE_PATH: ${{ runner.temp }}/finflow-release.jks
+          FINFLOW_KEYSTORE_PASSWORD: ${{ secrets.FINFLOW_KEYSTORE_PASSWORD }}
+          FINFLOW_KEY_ALIAS: ${{ secrets.FINFLOW_KEY_ALIAS }}
+          FINFLOW_KEY_PASSWORD: ${{ secrets.FINFLOW_KEY_PASSWORD }}
+        run: ./gradlew :app:phone:assembleRelease
+
+      - name: Clean up release keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/finflow-release.jks"
+
+      - name: Prepare & verify release artifacts
         run: |
           mkdir -p release-apks
-          TAG="${GITHUB_REF_NAME}"
-          cp ./app/phone/build/outputs/apk/libre/debug/phone-libre-arm64-v8a-debug.apk "release-apks/finflow-${TAG}-arm64-v8a-debug.apk"
-          cp ./app/phone/build/outputs/apk/libre/debug/phone-libre-armeabi-v7a-debug.apk "release-apks/finflow-${TAG}-armeabi-v7a-debug.apk"
+          cp ./app/phone/build/outputs/apk/libre/release/finflow-*-libre-arm64-v8a.apk release-apks/
+          cp ./app/phone/build/outputs/apk/libre/release/finflow-*-libre-armeabi-v7a.apk release-apks/
+          for apk in release-apks/*.apk; do
+            jarsigner -verify -strict "$apk"
+          done
+          (cd release-apks && sha256sum *.apk > SHA256SUMS.txt)
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          generate_release_notes: true
           fail_on_unmatched_files: true
-          files: release-apks/*.apk
+          files: release-apks/*
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: finflow-phone-apks
-          path: release-apks/*.apk
+          name: finflow-release-apks
+          path: release-apks/*

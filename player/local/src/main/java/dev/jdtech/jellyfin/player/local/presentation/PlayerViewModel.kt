@@ -585,10 +585,7 @@ constructor(
     }
 
     fun selectTranscodeAudioStream(audioStreamIndex: Int) {
-        reloadCurrentStream(
-            newMaxBitrate = selectedBitrate,
-            newAudioStreamIndex = audioStreamIndex,
-        )
+        reloadCurrentStream(newMaxBitrate = selectedBitrate, newAudioStreamIndex = audioStreamIndex)
     }
 
     private fun reloadCurrentStream(newMaxBitrate: Int, newAudioStreamIndex: Int?) {

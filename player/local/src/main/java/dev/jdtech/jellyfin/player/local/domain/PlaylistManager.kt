@@ -314,9 +314,12 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                         mediaStream.language,
                         mediaStream.path!!.toUri(),
                         when (mediaStream.codec.lowercase()) {
-                            "subrip", "srt" -> MimeTypes.APPLICATION_SUBRIP
-                            "webvtt", "vtt" -> MimeTypes.TEXT_VTT
-                            "ass", "ssa" -> MimeTypes.TEXT_SSA
+                            "subrip" -> MimeTypes.APPLICATION_SUBRIP
+                            "srt" -> MimeTypes.APPLICATION_SUBRIP
+                            "webvtt" -> MimeTypes.TEXT_VTT
+                            "vtt" -> MimeTypes.TEXT_VTT
+                            "ass" -> MimeTypes.TEXT_SSA
+                            "ssa" -> MimeTypes.TEXT_SSA
                             "ttml" -> MimeTypes.APPLICATION_TTML
                             else -> MimeTypes.TEXT_UNKNOWN
                         },

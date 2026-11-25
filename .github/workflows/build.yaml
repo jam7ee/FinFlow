@@ -21,6 +21,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
       - name: Build with Gradle
         run: ./gradlew :app:phone:assembleDebug
+      - name: Verify release build (R8/shrink)
+        run: ./gradlew :app:phone:assembleRelease
       - name: Upload artifact phone-libre-arm64-v8a-debug.apk
         uses: actions/upload-artifact@v7
         with:

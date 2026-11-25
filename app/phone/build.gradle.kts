@@ -30,11 +30,26 @@ android {
         testInstrumentationRunner = "dev.jdtech.jellyfin.HiltTestRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("FINFLOW_KEYSTORE_PATH")
+            if (!storeFilePath.isNullOrBlank()) {
+                storeFile = file(storeFilePath)
+                storePassword = System.getenv("FINFLOW_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("FINFLOW_KEY_ALIAS")
+                keyPassword = System.getenv("FINFLOW_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         named("debug") { applicationIdSuffix = ".debug" }
         named("release") {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (!System.getenv("FINFLOW_KEYSTORE_PATH").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

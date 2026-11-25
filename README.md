@@ -1,9 +1,9 @@
 # FinFlow
 
-![GitHub release](https://img.shields.io/github/v/release/jam7ee/findroid-Bitrate?style=for-the-badge)
-![GitHub stars](https://img.shields.io/github/stars/jam7ee/findroid-Bitrate?style=for-the-badge)
-![GitHub issues](https://img.shields.io/github/issues/jam7ee/findroid-Bitrate?style=for-the-badge)
-![License](https://img.shields.io/github/license/jam7ee/findroid-Bitrate?style=for-the-badge)
+![GitHub release](https://img.shields.io/github/v/release/jam7ee/FinFlow?style=for-the-badge)
+![GitHub stars](https://img.shields.io/github/stars/jam7ee/FinFlow?style=for-the-badge)
+![GitHub issues](https://img.shields.io/github/issues/jam7ee/FinFlow?style=for-the-badge)
+![License](https://img.shields.io/github/license/jam7ee/FinFlow?style=for-the-badge)
 
 **FinFlow** is a modified Android phone client for Jellyfin, forked from [Findroid](https://github.com/jarnedemeulemeester/findroid) by Jarne Demeulemeester.
 
@@ -38,7 +38,10 @@ FinFlow adds **configurable Wi-Fi / Mobile bitrate limits and live in-player tra
 
 ## Download & Install
 
-- Grab the latest APK from [GitHub Releases](https://github.com/jam7ee/findroid-Bitrate/releases) or download `phone-libre-arm64-v8a-debug.apk` from the latest green [GitHub Actions](https://github.com/jam7ee/findroid-Bitrate/actions) build.
+- Download the latest signed release APK from [GitHub Releases](https://github.com/jam7ee/FinFlow/releases):
+  - `finflow-v*-libre-arm64-v8a.apk` for modern 64-bit Android phones (recommended).
+  - `finflow-v*-libre-armeabi-v7a.apk` for older 32-bit ARM devices.
+- Pre-release debug builds for testing are also available in [GitHub Actions](https://github.com/jam7ee/FinFlow/actions) (`phone-libre-arm64-v8a-debug.apk`).
 - Requires a Jellyfin server with transcoding enabled if you select a bitrate lower than the source media bitrate.
 
 ## Credits & License

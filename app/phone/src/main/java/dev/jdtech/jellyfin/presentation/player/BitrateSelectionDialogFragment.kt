@@ -53,14 +53,13 @@ class BitrateSelectionDialogFragment(private val viewModel: PlayerViewModel) : D
                 1_000_000,
             )
 
-        val modeText =
-            getString(
-                if (uiState.isTranscoding) {
-                    R.string.bitrate_mode_transcode
-                } else {
-                    R.string.bitrate_mode_direct
-                },
-            )
+        val modeRes =
+            if (uiState.isTranscoding) {
+                R.string.bitrate_mode_transcode
+            } else {
+                R.string.bitrate_mode_direct
+            }
+        val modeText = getString(modeRes)
         val selectedIndex = bitrateValues.indexOf(viewModel.selectedBitrate)
         val checkedItem = if (selectedIndex >= 0) selectedIndex else 0
 
@@ -88,3 +87,4 @@ class BitrateSelectionDialogFragment(private val viewModel: PlayerViewModel) : D
         }
     }
 }
+

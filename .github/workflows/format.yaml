@@ -9,6 +9,7 @@ on:
     paths:
       - '**.kt'
       - '**.kts'
+  workflow_dispatch:
 
 jobs:
   format:
@@ -26,3 +27,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
       - name: Check with ktfmt
         run: ./gradlew ktfmtCheck
+      - name: Generate ktfmt patch on failure
+        if: failure()
+        run: |
+          ./gradlew ktfmtFormat || true
+          git diff > ktfmt-fix.patch
+      - name: Upload ktfmt patch on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ktfmt-fix.patch
+          path: ktfmt-fix.patch
+          if-no-files-found: ignore

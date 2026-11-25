@@ -10,3 +10,4 @@ data class PlayerAudioStream(
     val language: String,
     val codec: String,
 ) : Parcelable
+
