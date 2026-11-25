@@ -6,6 +6,7 @@ import dev.jdtech.jellyfin.models.FindroidChapter
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.FindroidSource
 import dev.jdtech.jellyfin.models.FindroidSourceType
 import dev.jdtech.jellyfin.models.FindroidSources
 import dev.jdtech.jellyfin.player.core.domain.models.ExternalSubtitle
@@ -222,6 +223,25 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         return reloadedItem
     }
 
+    private fun selectMediaSource(
+        mediaSources: List<FindroidSource>,
+        mediaSourceId: String?,
+        mediaSourceIndex: Int?,
+    ): FindroidSource {
+        return if (mediaSourceId != null) {
+            val remote =
+                mediaSources.firstOrNull {
+                    it.id == mediaSourceId && it.type == FindroidSourceType.REMOTE
+                }
+            val any = mediaSources.firstOrNull { it.id == mediaSourceId }
+            remote ?: any ?: mediaSources[0]
+        } else if (mediaSourceIndex == null) {
+            mediaSources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: mediaSources[0]
+        } else {
+            mediaSources[mediaSourceIndex]
+        }
+    }
+
     private suspend fun FindroidItem.toPlayerItem(
         mediaSourceIndex: Int?,
         playbackPosition: Long,
@@ -230,27 +250,48 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
     ): PlayerItem {
         Timber.d("Converting FindroidItem ${this.id} to PlayerItem")
 
-        val mediaSources =
+        val effectiveMaxBitrate = maxBitrate.takeIf { it > 0 }
+        val initialSourceId =
+            when {
+                mediaSourceId != null -> mediaSourceId
+                effectiveMaxBitrate != null && this is FindroidSources -> {
+                    if (mediaSourceIndex != null) {
+                        sources.getOrNull(mediaSourceIndex)?.id?.ifBlank { null }
+                    } else if (sources.none { it.type == FindroidSourceType.LOCAL }) {
+                        sources.firstOrNull { it.id.isNotBlank() }?.id
+                    } else {
+                        null
+                    }
+                }
+                else -> null
+            }
+
+        var mediaSources =
             repository.getMediaSources(
                 id,
                 includePath = true,
-                maxBitrate = maxBitrate.takeIf { it > 0 },
+                maxBitrate = effectiveMaxBitrate,
                 audioStreamIndex = audioStreamIndex,
-                mediaSourceId = mediaSourceId,
+                mediaSourceId = initialSourceId,
             )
-        val mediaSource =
-            if (mediaSourceId != null) {
-                val remote =
-                    mediaSources.firstOrNull {
-                        it.id == mediaSourceId && it.type == FindroidSourceType.REMOTE
-                    }
-                val any = mediaSources.firstOrNull { it.id == mediaSourceId }
-                remote ?: any ?: mediaSources[0]
-            } else if (mediaSourceIndex == null) {
-                mediaSources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: mediaSources[0]
-            } else {
-                mediaSources[mediaSourceIndex]
-            }
+        var mediaSource = selectMediaSource(mediaSources, initialSourceId, mediaSourceIndex)
+
+        if (
+            effectiveMaxBitrate != null &&
+                initialSourceId == null &&
+                mediaSource.isTranscoding &&
+                mediaSource.id.isNotBlank()
+        ) {
+            mediaSources =
+                repository.getMediaSources(
+                    id,
+                    includePath = true,
+                    maxBitrate = effectiveMaxBitrate,
+                    audioStreamIndex = audioStreamIndex,
+                    mediaSourceId = mediaSource.id,
+                )
+            mediaSource = selectMediaSource(mediaSources, mediaSource.id, mediaSourceIndex)
+        }
         val externalSubtitles =
             mediaSource.mediaStreams
                 .filter { mediaStream ->
