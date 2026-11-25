@@ -31,21 +31,18 @@ class TrackSelectionDialogFragment(
         ) {
             val audioStreams = viewModel.getCurrentAudioStreams()
             val selectedIndex = viewModel.getSelectedAudioStreamIndex()
-            val checkedItem =
-                audioStreams
-                    .indexOfFirst { it.index == selectedIndex }
-                    .let { if (it >= 0) it else 0 }
+            val selectedPos = audioStreams.indexOfFirst { it.index == selectedIndex }
+            val checkedItem = if (selectedPos >= 0) selectedPos else 0
             return activity?.let { activity ->
                 val builder = MaterialAlertDialogBuilder(activity)
-                builder
-                    .setTitle(getString(titleResource))
-                    .setSingleChoiceItems(
-                        audioStreams.map { it.displayTitle }.toTypedArray(),
-                        checkedItem,
-                    ) { dialog, which ->
-                        viewModel.selectTranscodeAudioStream(audioStreams[which].index)
-                        dialog.dismiss()
-                    }
+                builder.setTitle(getString(titleResource))
+                builder.setSingleChoiceItems(
+                    audioStreams.map { it.displayTitle }.toTypedArray(),
+                    checkedItem,
+                ) { dialog, which ->
+                    viewModel.selectTranscodeAudioStream(audioStreams[which].index)
+                    dialog.dismiss()
+                }
                 builder.create()
             } ?: throw IllegalStateException("Activity cannot be null")
         }

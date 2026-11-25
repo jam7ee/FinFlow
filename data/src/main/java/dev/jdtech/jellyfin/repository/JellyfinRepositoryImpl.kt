@@ -359,6 +359,7 @@ class JellyfinRepositoryImpl(
                                     protocol = MediaStreamProtocol.HLS,
                                     context = EncodingContext.STREAMING,
                                     enableSubtitlesInManifest = false,
+                                    conditions = emptyList(),
                                 ),
                             ),
                         subtitleProfiles =

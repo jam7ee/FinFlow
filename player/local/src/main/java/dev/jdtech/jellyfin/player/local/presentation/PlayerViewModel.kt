@@ -1,7 +1,6 @@
 package dev.jdtech.jellyfin.player.local.presentation
 
 import android.app.Application
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.ConnectivityManager
@@ -188,10 +187,8 @@ constructor(
     private fun resolveDefaultBitrate(): Int {
         val isWifiOrUnmetered =
             try {
-                val cm =
-                    application.getSystemService(Context.CONNECTIVITY_SERVICE)
-                        as ConnectivityManager
-                val network = cm.activeNetwork
+                val cm = application.getSystemService(ConnectivityManager::class.java)
+                val network = cm?.activeNetwork
                 val caps = network?.let { cm.getNetworkCapabilities(it) }
                 if (caps == null) {
                     true
@@ -210,12 +207,14 @@ constructor(
             } else {
                 appPreferences.getValue(appPreferences.playerMaxBitrateMobile)
             }
-        return raw?.toIntOrNull() ?: 0
+        return raw.toIntOrNull() ?: 0
     }
 
     private fun currentPlayerItem(): PlayerItem? {
-        return items.getOrNull(player.currentMediaItemIndex)
-            ?: items.firstOrNull { it.itemId.toString() == player.currentMediaItem?.mediaId }
+        val byIndex = items.getOrNull(player.currentMediaItemIndex)
+        if (byIndex != null) return byIndex
+        val currentId = player.currentMediaItem?.mediaId
+        return items.firstOrNull { it.itemId.toString() == currentId }
     }
 
     fun initializePlayer(itemId: UUID, itemKind: String, startFromBeginning: Boolean) {
@@ -651,7 +650,7 @@ constructor(
                 )
             }
 
-            player.setMediaItems(listOf(reloadedItem.toMediaItem()), 0, savedPosition)
+            player.setMediaItems(mutableListOf(reloadedItem.toMediaItem()), 0, savedPosition)
             player.prepare()
             player.setPlaybackSpeed(savedSpeed)
             player.playWhenReady = wasPlaying

@@ -239,21 +239,17 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                 mediaSourceId = mediaSourceId,
             )
         val mediaSource =
-            when {
-                mediaSourceId != null -> {
+            if (mediaSourceId != null) {
+                val remote =
                     mediaSources.firstOrNull {
                         it.id == mediaSourceId && it.type == FindroidSourceType.REMOTE
                     }
-                        ?: mediaSources.firstOrNull { it.id == mediaSourceId }
-                        ?: mediaSources[0]
-                }
-                mediaSourceIndex == null -> {
-                    mediaSources.firstOrNull { it.type == FindroidSourceType.LOCAL }
-                        ?: mediaSources[0]
-                }
-                else -> {
-                    mediaSources[mediaSourceIndex]
-                }
+                val any = mediaSources.firstOrNull { it.id == mediaSourceId }
+                remote ?: any ?: mediaSources[0]
+            } else if (mediaSourceIndex == null) {
+                mediaSources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: mediaSources[0]
+            } else {
+                mediaSources[mediaSourceIndex]
             }
         val externalSubtitles =
             mediaSource.mediaStreams
@@ -277,12 +273,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                         mediaStream.language,
                         mediaStream.path!!.toUri(),
                         when (mediaStream.codec.lowercase()) {
-                            "subrip",
-                            "srt" -> MimeTypes.APPLICATION_SUBRIP
-                            "webvtt",
-                            "vtt" -> MimeTypes.TEXT_VTT
-                            "ass",
-                            "ssa" -> MimeTypes.TEXT_SSA
+                            "subrip", "srt" -> MimeTypes.APPLICATION_SUBRIP
+                            "webvtt", "vtt" -> MimeTypes.TEXT_VTT
+                            "ass", "ssa" -> MimeTypes.TEXT_SSA
                             "ttml" -> MimeTypes.APPLICATION_TTML
                             else -> MimeTypes.TEXT_UNKNOWN
                         },
@@ -299,11 +292,10 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                                 stream.channelLayout?.ifBlank { null },
                             )
                             .joinToString(" - ")
+                    val displayTitle = stream.displayTitle?.ifBlank { null }
                     PlayerAudioStream(
                         index = stream.index,
-                        displayTitle =
-                            stream.displayTitle?.ifBlank { null }
-                                ?: stream.title.ifBlank { fallbackTitle },
+                        displayTitle = displayTitle ?: stream.title.ifBlank { fallbackTitle },
                         language = stream.language,
                         codec = stream.codec,
                     )

@@ -61,17 +61,17 @@ class BitrateSelectionDialogFragment(private val viewModel: PlayerViewModel) : D
                     R.string.bitrate_mode_direct
                 },
             )
-        val checkedItem =
-            bitrateValues.indexOf(viewModel.selectedBitrate).let { if (it >= 0) it else 0 }
+        val selectedIndex = bitrateValues.indexOf(viewModel.selectedBitrate)
+        val checkedItem = if (selectedIndex >= 0) selectedIndex else 0
 
         return activity?.let { activity ->
             val builder = MaterialAlertDialogBuilder(activity)
-            builder
-                .setTitle("${getString(R.string.select_bitrate)} ($modeText)")
-                .setSingleChoiceItems(bitrateTexts.toTypedArray(), checkedItem) { dialog, which ->
-                    viewModel.selectBitrate(bitrateValues[which])
-                    dialog.dismiss()
-                }
+            builder.setTitle("${getString(R.string.select_bitrate)} ($modeText)")
+            val items = bitrateTexts.toTypedArray()
+            builder.setSingleChoiceItems(items, checkedItem) { dialog, which ->
+                viewModel.selectBitrate(bitrateValues[which])
+                dialog.dismiss()
+            }
             builder.create()
         } ?: throw IllegalStateException("Activity cannot be null")
     }
