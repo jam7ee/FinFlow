@@ -79,7 +79,7 @@
     <string name="settings_category_permissions">Machtigingen</string>
     <string name="permission_local_network">Toegang tot het lokale netwerk</string>
     <string name="permission_local_network_summary">Vereist om servers op je lokale netwerk te vinden en ermee te verbinden</string>
-    <string name="permission_local_network_rationale">Findroid heeft toegang tot je lokale netwerk nodig om je Jellyfin-server te vinden en ermee te verbinden. Externe servers worden hierdoor niet beïnvloed.</string>
+    <string name="permission_local_network_rationale">FinFlow heeft toegang tot je lokale netwerk nodig om je Jellyfin-server te vinden en ermee te verbinden. Externe servers worden hierdoor niet beïnvloed.</string>
     <string name="permission_status_granted">Verleend</string>
     <string name="permission_status_denied">Geweigerd</string>
     <string name="pref_player_trickplay">Trickplay</string>

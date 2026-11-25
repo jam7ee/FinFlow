@@ -3,20 +3,19 @@ name: Publish
 on:
   push:
     tags:
-      - v*
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   publish:
-    name: Publish
+    name: Build & Release Phone APK
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
 
       - name: Set up JDK
         uses: actions/setup-java@v6
@@ -24,35 +23,31 @@ jobs:
           java-version: 17
           distribution: temurin
 
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Decode keystore file
-        uses: timheuer/base64-to-file@v2
-        id: findroid_keystore
-        with:
-          fileName: 'findroid-keystore.jks'
-          encodedString: ${{ secrets.FINDROID_KEYSTORE }}
+      # To publish signed release builds later, configure a keystore in repository secrets
+      # and switch to :app:phone:assembleRelease.
+      - name: Build phone APKs
+        run: ./gradlew :app:phone:assembleDebug
 
-      - name: Decode Play API credentials file
-        uses: timheuer/base64-to-file@v2
-        id: findroid_play_api_credentials
-        with:
-          fileName: 'findroid-play-api-credentials.json'
-          encodedString: ${{ secrets.FINDROID_PLAY_API_CREDENTIALS }}
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p release-apks
+          TAG="${GITHUB_REF_NAME}"
+          cp ./app/phone/build/outputs/apk/libre/debug/phone-libre-arm64-v8a-debug.apk "release-apks/finflow-${TAG}-arm64-v8a-debug.apk"
+          cp ./app/phone/build/outputs/apk/libre/debug/phone-libre-armeabi-v7a-debug.apk "release-apks/finflow-${TAG}-armeabi-v7a-debug.apk"
 
-      - name: Build and publish
-        run: bundle exec fastlane publish
-        env:
-          FINDROID_KEYSTORE: ${{ steps.findroid_keystore.outputs.filePath }}
-          FINDROID_KEYSTORE_PASSWORD: ${{ secrets.FINDROID_KEYSTORE_PASSWORD }}
-          FINDROID_KEY_ALIAS: ${{ secrets.FINDROID_KEY_ALIAS }}
-          FINDROID_KEY_PASSWORD: ${{ secrets.FINDROID_KEY_PASSWORD }}
-          FINDROID_PLAY_API_CREDENTIALS: ${{ steps.findroid_play_api_credentials.outputs.filePath }}
-
-      - name: Create release
-        uses: softprops/action-gh-release@v3
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
           draft: true
           fail_on_unmatched_files: true
-          files: ./app/phone/build/outputs/apk/libre/release/findroid-v*-libre-*.apk
+          files: release-apks/*.apk
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: finflow-phone-apks
+          path: release-apks/*.apk

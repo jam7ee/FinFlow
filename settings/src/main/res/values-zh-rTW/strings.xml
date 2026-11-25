@@ -103,7 +103,7 @@
     <string name="settings_category_permissions">權限</string>
     <string name="permission_local_network">本地網路存取</string>
     <string name="permission_local_network_summary">需要尋找並連接到您本地網路上的伺服器</string>
-    <string name="permission_local_network_rationale">Findroid 需要存取你的本地網路，才能找到並連線到你的 Jellyfin 伺服器。遠端伺服器則不受影響。</string>
+    <string name="permission_local_network_rationale">FinFlow 需要存取你的本地網路，才能找到並連線到你的 Jellyfin 伺服器。遠端伺服器則不受影響。</string>
     <string name="permission_status_granted">已允許</string>
     <string name="permission_status_denied">已拒絕</string>
     <string name="pref_player_backend">播放器引擎</string>
@@ -112,4 +112,8 @@
     <string name="discard_changes_dialog_text">你有未儲存的變更。</string>
     <string name="discard_changes_dialog_title">放棄變更？</string>
     <string name="edit_file_title">編輯 %1$s</string>
+    <string name="streaming_quality">播放碼率</string>
+    <string name="pref_player_max_bitrate_wifi">Wi-Fi 預設最大碼率</string>
+    <string name="pref_player_max_bitrate_mobile">行動網路預設最大碼率</string>
+    <string name="bitrate_original">原畫</string>
 </resources>

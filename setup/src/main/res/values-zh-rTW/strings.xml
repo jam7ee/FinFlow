@@ -31,10 +31,10 @@
     <string name="remove_server_address_dialog_text">您確定要刪除伺服器位址嗎%1$s</string>
     <string name="servers">伺服器</string>
     <string name="servers_btn_add_server">添加伺服器</string>
-    <string name="welcome">歡迎使用 Findroid</string>
+    <string name="welcome">歡迎使用 FinFlow</string>
     <string name="welcome_btn_continue">繼續</string>
     <string name="welcome_btn_learn_more">瞭解 Jellyfin 是什麼</string>
-    <string name="welcome_text">Findroid 是 Jellyfin 的第三方用戶端，本身不提供任何媒體內容。\n\n若要使用此用戶端，你需要自行架設 Jellyfin 伺服器。</string>
+    <string name="welcome_text">FinFlow 是 Jellyfin 的第三方用戶端，本身不提供任何媒體內容。\n\n若要使用此用戶端，你需要自行架設 Jellyfin 伺服器。</string>
     <string name="confirm">確認</string>
     <string name="cancel">取消</string>
     <string name="or">或</string>

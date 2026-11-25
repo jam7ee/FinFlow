@@ -1,76 +1,47 @@
-![Findroid banner](images/findroid-banner.png)
+# FinFlow
 
-# Findroid
-![GitHub release (with filter)](https://img.shields.io/github/v/release/jarnedemeulemeester/findroid?style=for-the-badge)
-![GitHub repo stars](https://img.shields.io/github/stars/jarnedemeulemeester/findroid?style=for-the-badge)
-![GitHub issues](https://img.shields.io/github/issues/jarnedemeulemeester/findroid?style=for-the-badge)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/jarnedemeulemeester/findroid?style=for-the-badge)
-![GitHub all releases](https://img.shields.io/github/downloads/jarnedemeulemeester/findroid/total?style=for-the-badge)
-![GitHub](https://img.shields.io/github/license/jarnedemeulemeester/findroid?style=for-the-badge)
+![GitHub release](https://img.shields.io/github/v/release/jam7ee/findroid-Bitrate?style=for-the-badge)
+![GitHub stars](https://img.shields.io/github/stars/jam7ee/findroid-Bitrate?style=for-the-badge)
+![GitHub issues](https://img.shields.io/github/issues/jam7ee/findroid-Bitrate?style=for-the-badge)
+![License](https://img.shields.io/github/license/jam7ee/findroid-Bitrate?style=for-the-badge)
 
-Findroid is third-party Android application for Jellyfin that provides a native user interface to browse and play movies and series.
+**FinFlow** is a modified Android phone client for Jellyfin, forked from [Findroid](https://github.com/jarnedemeulemeester/findroid) by Jarne Demeulemeester.
 
-Findroid requires Jellyfin server version 12.0 or higher.
+FinFlow adds **configurable Wi-Fi / Mobile bitrate limits and live in-player transcoding bitrate switching** while preserving Findroid's clean native UI and independent client-side subtitle rendering.
 
-I am developing this application in my spare time.
+---
 
-**This project is in its early stages so expect bugs.**
+## Key Enhancements (vs. Upstream Findroid)
 
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=dev.jdtech.jellyfin)
-[<img src="https://user-images.githubusercontent.com/32322857/219019331-027a6775-7362-44bb-a026-281f71e9b37b.png" alt="Available at Amazon Appstore" height="80">](https://www.amazon.com/gp/product/B0BTWC8DNZ)
-[<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/dev.jdtech.jellyfin)
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/fdroid/index/apk/dev.jdtech.jellyfin)
+- **Wi-Fi & Mobile Data Default Max Bitrate** (`Settings → Player → Streaming quality`)
+  - Set independent default bitrate caps for Wi-Fi (or unmetered networks) and mobile data, from `Original` down to `1 Mbps`.
+  - Automatically selects Direct Play when the media bitrate is within your cap, or requests server-side HLS transcoding when exceeded.
+- **In-Player Live Bitrate Switching**
+  - Switch streaming bitrate on the fly from the player top bar while preserving playback position and playback speed.
+  - Properly stops previous server-side transcode sessions (`PlaybackStopped` with `playSessionId`) when switching bitrates or exiting.
+- **Independent Text Subtitle Rendering During Transcoding**
+  - Explicitly disables subtitle burn-in (`subtitleStreamIndex = -1`, `alwaysBurnInSubtitleWhenTranscoding = false`) and requests text subtitles (`SRT`, `ASS`, `SSA`, `VTT`, `TTML`) as external streams.
+  - Keeps dual-language subtitles rendered cleanly on the client overlay so pinch-to-fill-screen zoom never crops subtitles.
+- **Transcode-Mode Audio Track Switching**
+  - Allows switching audio streams during active HLS transcoding by reloading the stream at the current position.
+- **Independent Package ID (`io.github.jam7ee.finflow`)**
+  - Installs cleanly alongside the official Findroid app.
 
-## Screenshots
-| Home                                | Library                             | Movie                           | Season                            | Episode                             |
-|-------------------------------------|-------------------------------------|---------------------------------|-----------------------------------|-------------------------------------|
-| ![Home](fastlane/metadata/android/en-US/images/phoneScreenshots/1_en-US.png) | ![Library](fastlane/metadata/android/en-US/images/phoneScreenshots/2_en-US.png) | ![Movie](fastlane/metadata/android/en-US/images/phoneScreenshots/3_en-US.png) | ![Season](fastlane/metadata/android/en-US/images/phoneScreenshots/4_en-US.png) | ![Episode](fastlane/metadata/android/en-US/images/phoneScreenshots/5_en-US.png) |
+## 简体中文简介
 
-## Features
-- Completely native interface
-- Supported media items: movies, series, seasons, episodes 
-  - Direct play only, (no transcoding)
-- Offline playback / downloads
-- ExoPlayer
-  - Video codecs: H.263, H.264, H.265, VP8, VP9, AV1 
-    - Support depends on Android device
-  - Audio codecs: Vorbis, Opus, FLAC, ALAC, PCM, MP3, AAC, AC-3, E-AC-3, DTS, DTS-HD, TrueHD 
-    - Support provided by ExoPlayer FFmpeg extension
-  - Subtitle codecs: SRT, VTT, SSA/ASS, PGSSUB
-    - SSA/ASS has limited styling support see [this issue](https://github.com/google/ExoPlayer/issues/8435)
-- mpv
-  - Container formats: mkv, mov, mp4, avi
-  - Video codecs: H.264, H.265, H.266, VP8, VP9, AV1
-  - Audio codecs: Opus, FLAC, MP3, AAC, AC-3, E-AC-3, TrueHD, DTS, DTS-HD
-  - Subtitle codecs: SRT, VTT, SSA/ASS, DVDSUB
-  - Optionally force software decoding when hardware decoding has issues.
-- Picture-in-picture mode
-- Media chapters
-  - Timeline markers
-  - Chapter navigation gestures
-- Trickplay
-- Media segments
-  - Skip button
-  - Auto skip
+**FinFlow** 是基于开源 Jellyfin 安卓客户端 [Findroid](https://github.com/jarnedemeulemeester/findroid) 修改的手机端衍生版本，主要新增：
 
-## Planned features
-- Android TV
-- Websocket connection (Syncplay)
-- Chromecast support
+- **Wi-Fi / 移动网络分设默认最大码率**（设置 → 播放器 → 播放码率）
+- **播放器内实时切换码率**（自动保留当前播放进度与倍速，并及时释放服务端转码进程）
+- **转码时保留客户端独立字幕渲染**（不烧录文本字幕，双语字幕与「填满屏幕」缩放互不干扰）
+- **独立包名 `io.github.jam7ee.finflow`**（可与原版 Findroid 同机共存）
 
-## Translating
-[JDTech Weblate](https://weblate.jdtech.dev) is a self-hosted instance of Weblate where you can translate this project and future projects of mine.
+## Download & Install
 
-## Questions?
-We have a [Discord server](https://discord.gg/tg5VvTFwTV) to discuss future development or ask general questions.
+- Grab the latest APK from [GitHub Releases](https://github.com/jam7ee/findroid-Bitrate/releases) or download `phone-libre-arm64-v8a-debug.apk` from the latest green [GitHub Actions](https://github.com/jam7ee/findroid-Bitrate/actions) build.
+- Requires a Jellyfin server with transcoding enabled if you select a bitrate lower than the source media bitrate.
 
-## License
-This project is licensed under [GPLv3](LICENSE).
+## Credits & License
 
-The logo is a combination of the Jellyfin logo and the Android robot.
-
-The Android robot is reproduced or modified from work created and shared by Google and used according to terms described in the Creative Commons 3.0 Attribution License.
-
-Android is a trademark of Google LLC.
-
-Google Play and the Google Play logo are trademarks of Google LLC.
+- Upstream project: [jarnedemeulemeester/findroid](https://github.com/jarnedemeulemeester/findroid) by Jarne Demeulemeester.
+- This project is licensed under the **GNU General Public License v3.0 ([LICENSE](LICENSE))**, in full compliance with upstream Findroid's GPLv3 license.

@@ -109,7 +109,7 @@
     <string name="settings_category_permissions">Berechtigungen</string>
     <string name="permission_local_network">Zugriff auf das lokale Netzwerk</string>
     <string name="permission_local_network_summary">Erforderlich, um Server in Ihrem lokalen Netzwerk zu finden und eine Verbindung herzustellen</string>
-    <string name="permission_local_network_rationale">Findroid benötigt Zugriff auf dein lokales Netzwerk, um deinen Jellyfin-Server zu finden und eine Verbindung herzustellen. Dies hat keine Auswirkungen auf externe Server.</string>
+    <string name="permission_local_network_rationale">FinFlow benötigt Zugriff auf dein lokales Netzwerk, um deinen Jellyfin-Server zu finden und eine Verbindung herzustellen. Dies hat keine Auswirkungen auf externe Server.</string>
     <string name="permission_status_granted">Gewährt</string>
     <string name="permission_status_denied">Verweigert</string>
 </resources>

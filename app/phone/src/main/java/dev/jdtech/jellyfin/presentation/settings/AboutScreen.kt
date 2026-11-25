@@ -135,7 +135,7 @@ fun AboutScreen(navigateBack: () -> Unit) {
                                     onClick = {
                                         try {
                                             uriHandler.openUri(
-                                                "https://github.com/jarnedemeulemeester/findroid",
+                                                "https://github.com/jam7ee/findroid-Bitrate",
                                             )
                                         } catch (e: IllegalArgumentException) {
                                             Toast.makeText(
