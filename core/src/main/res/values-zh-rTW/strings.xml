@@ -110,4 +110,14 @@
     <string name="download_failed">下載失敗</string>
     <string name="discard">放棄</string>
     <string name="tribute_to_findroid">向原作Findroid致敬</string>
+    <string name="switch_to_local">切至內網</string>
+    <string name="switch_to_external">切至外網</string>
+    <string name="switch_address">切換位址</string>
+    <string name="release_to_switch_local">放開切內網</string>
+    <string name="release_to_switch_external">放開切外網</string>
+    <string name="release_to_switch_address">放開切換</string>
+    <string name="switched_to_local">已切換至內網連線</string>
+    <string name="switched_to_external">已切換至外網連線</string>
+    <string name="switched_address_generic">已切換伺服器位址</string>
+    <string name="quick_toggle_address_unavailable">請先在伺服器位址中設定內網與外網位址</string>
 </resources>

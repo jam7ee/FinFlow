@@ -10,6 +10,7 @@ import dev.jdtech.jellyfin.models.ServerAddress
 import dev.jdtech.jellyfin.models.ServerWithAddresses
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.models.User
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.setup.R as SetupR
 import dev.jdtech.jellyfin.setup.domain.SetupRepository
@@ -31,6 +32,7 @@ class SetupRepositoryImpl(
     private val jellyfinApi: JellyfinApi,
     private val database: ServerDatabaseDao,
     private val appPreferences: AppPreferences,
+    private val connectionManager: ServerConnectionManager,
 ) : SetupRepository {
     override fun discoverServers(): Flow<ServerDiscoveryInfo> {
         return jellyfinApi.jellyfin.discovery.discoverLocalServers()
@@ -72,6 +74,7 @@ class SetupRepositoryImpl(
             api.update(baseUrl = serverAddress.address, accessToken = user?.accessToken)
             userId = user?.id
         }
+        connectionManager.onServerChanged()
     }
 
     override suspend fun addServer(address: String): Server {
@@ -297,5 +300,6 @@ class SetupRepositoryImpl(
         server.currentServerAddressId = address.id
         database.updateServer(server)
         jellyfinApi.apply { api.update(baseUrl = address.address) }
+        connectionManager.onManualAddressSelected(server.id, address.id)
     }
 }

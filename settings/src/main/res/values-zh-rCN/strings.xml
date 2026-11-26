@@ -101,6 +101,7 @@
     <string name="media_segments_type_intro">片头</string>
     <string name="pref_player_media_segments_skip_button_duration">显示跳过按钮</string>
     <string name="streaming_quality">播放码率</string>
+    <string name="pref_player_max_bitrate_local">同局域网默认最大码率</string>
     <string name="pref_player_max_bitrate_wifi">Wi-Fi 默认最大码率</string>
     <string name="pref_player_max_bitrate_mobile">移动网络默认最大码率</string>
     <string name="bitrate_original">原画</string>

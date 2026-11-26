@@ -8,6 +8,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.jdtech.jellyfin.api.JellyfinApi
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import javax.inject.Singleton
 import kotlinx.coroutines.runBlocking
@@ -48,5 +49,21 @@ object ApiModule {
         }
 
         return jellyfinApi
+    }
+
+    @Singleton
+    @Provides
+    fun provideServerConnectionManager(
+        @ApplicationContext application: Context,
+        jellyfinApi: JellyfinApi,
+        database: ServerDatabaseDao,
+        appPreferences: AppPreferences,
+    ): ServerConnectionManager {
+        return ServerConnectionManager(
+            context = application,
+            jellyfinApi = jellyfinApi,
+            database = database,
+            appPreferences = appPreferences,
+        )
     }
 }

@@ -3,8 +3,6 @@ package dev.jdtech.jellyfin.player.local.presentation
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -14,6 +12,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -22,6 +21,8 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.models.FindroidSegmentType
+import dev.jdtech.jellyfin.network.NetworkTier
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerAudioStream
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerItem
@@ -38,6 +39,7 @@ import kotlin.math.ceil
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +60,7 @@ constructor(
     private val playlistManager: PlaylistManager,
     private val repository: JellyfinRepository,
     private val appPreferences: AppPreferences,
+    private val connectionManager: ServerConnectionManager,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel(), Player.Listener {
     val player: Player
@@ -109,6 +112,12 @@ constructor(
 
     var playbackSpeed: Float = 1f
     var selectedBitrate: Int = 0
+    private var userOverrodeBitrate: Boolean = false
+    private var activeBaseUrl: String = ""
+    private var activeNetworkTier: NetworkTier? = null
+    private var hasInitializedStream: Boolean = false
+    private var reloadJob: Job? = null
+    private var connectionObserverJob: Job? = null
 
     var isInPictureInPictureMode: Boolean = false
 
@@ -184,28 +193,12 @@ constructor(
             }
     }
 
-    private fun resolveDefaultBitrate(): Int {
-        val isWifiOrUnmetered =
-            try {
-                val cm = application.getSystemService(ConnectivityManager::class.java)
-                val network = cm?.activeNetwork
-                val caps = network?.let { cm.getNetworkCapabilities(it) }
-                if (caps == null) {
-                    true
-                } else {
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ||
-                        (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) &&
-                            !caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
-                }
-            } catch (_: Exception) {
-                true
-            }
+    private fun bitrateForTier(tier: NetworkTier): Int {
         val raw =
-            if (isWifiOrUnmetered) {
-                appPreferences.getValue(appPreferences.playerMaxBitrateWifi)
-            } else {
-                appPreferences.getValue(appPreferences.playerMaxBitrateMobile)
+            when (tier) {
+                NetworkTier.LOCAL -> appPreferences.getValue(appPreferences.playerMaxBitrateLocal)
+                NetworkTier.WIFI -> appPreferences.getValue(appPreferences.playerMaxBitrateWifi)
+                NetworkTier.MOBILE -> appPreferences.getValue(appPreferences.playerMaxBitrateMobile)
             }
         return raw.toIntOrNull() ?: 0
     }
@@ -219,9 +212,14 @@ constructor(
 
     fun initializePlayer(itemId: UUID, itemKind: String, startFromBeginning: Boolean) {
         player.addListener(this)
+        userOverrodeBitrate = false
+        hasInitializedStream = false
 
         viewModelScope.launch {
-            selectedBitrate = resolveDefaultBitrate()
+            val initialTier = connectionManager.getCurrentNetworkTier()
+            activeNetworkTier = initialTier
+            activeBaseUrl = repository.getBaseUrl()
+            selectedBitrate = bitrateForTier(initialTier)
             playlistManager.maxBitrate = selectedBitrate
 
             val startItem =
@@ -265,6 +263,44 @@ constructor(
             player.setMediaItems(mediaItems, 0, startPosition)
             player.prepare()
             player.play()
+            hasInitializedStream = true
+            startObservingConnection()
+        }
+    }
+
+    private fun startObservingConnection() {
+        connectionObserverJob?.cancel()
+        connectionObserverJob = viewModelScope.launch {
+            connectionManager.snapshot.collect { snapshot ->
+                if (!hasInitializedStream) return@collect
+                val currentItem = currentPlayerItem() ?: return@collect
+                if (currentItem.isLocal) return@collect
+
+                val urlChanged =
+                    !snapshot.currentBaseUrl.isNullOrBlank() &&
+                        snapshot.currentBaseUrl != activeBaseUrl
+                val targetBitrate =
+                    if (userOverrodeBitrate) {
+                        selectedBitrate
+                    } else {
+                        bitrateForTier(snapshot.networkTier)
+                    }
+                val bitrateChanged =
+                    !userOverrodeBitrate &&
+                        snapshot.networkTier != activeNetworkTier &&
+                        targetBitrate != selectedBitrate
+
+                if (urlChanged || bitrateChanged) {
+                    activeBaseUrl = snapshot.currentBaseUrl ?: activeBaseUrl
+                    activeNetworkTier = snapshot.networkTier
+                    reloadCurrentStream(
+                        newMaxBitrate = targetBitrate,
+                        newAudioStreamIndex = currentItem.selectedAudioStreamIndex,
+                    )
+                } else {
+                    activeNetworkTier = snapshot.networkTier
+                }
+            }
         }
     }
 
@@ -578,6 +614,7 @@ constructor(
 
     fun selectBitrate(maxBitrate: Int) {
         if (maxBitrate == selectedBitrate) return
+        userOverrodeBitrate = true
         reloadCurrentStream(
             newMaxBitrate = maxBitrate,
             newAudioStreamIndex = currentPlayerItem()?.selectedAudioStreamIndex,
@@ -601,7 +638,8 @@ constructor(
         playlistManager.maxBitrate = newMaxBitrate
         _uiState.update { it.copy(selectedBitrate = newMaxBitrate, fileLoaded = false) }
 
-        viewModelScope.launch {
+        reloadJob?.cancel()
+        reloadJob = viewModelScope.launch {
             if (currentItem.isTranscoding && currentItem.playSessionId != null) {
                 try {
                     val percentage =
@@ -837,6 +875,15 @@ constructor(
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         super.onIsPlayingChanged(isPlaying)
         eventsChannel.trySend(PlayerEvents.IsPlayingChanged(isPlaying))
+    }
+
+    override fun onPlayerError(error: PlaybackException) {
+        super.onPlayerError(error)
+        Timber.e(error, "Player error occurred")
+        val currentItem = currentPlayerItem()
+        if (currentItem != null && !currentItem.isLocal) {
+            viewModelScope.launch { connectionManager.evaluateAndApply(force = false) }
+        }
     }
 }
 

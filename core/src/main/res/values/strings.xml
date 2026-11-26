@@ -110,4 +110,14 @@
     <string name="download_downloading">Downloading…</string>
     <string name="download_failed">Failed to download</string>
     <string name="tribute_to_findroid">Tribute to original Findroid</string>
+    <string name="switch_to_local">Switch to LAN</string>
+    <string name="switch_to_external">Switch to External</string>
+    <string name="switch_address">Switch URL</string>
+    <string name="release_to_switch_local">Release for LAN</string>
+    <string name="release_to_switch_external">Release for External</string>
+    <string name="release_to_switch_address">Release to switch</string>
+    <string name="switched_to_local">Switched to LAN connection</string>
+    <string name="switched_to_external">Switched to external connection</string>
+    <string name="switched_address_generic">Switched server address</string>
+    <string name="quick_toggle_address_unavailable">Add LAN &amp; external addresses in server settings first</string>
 </resources>

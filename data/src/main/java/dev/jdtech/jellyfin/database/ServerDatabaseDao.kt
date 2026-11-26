@@ -91,6 +91,20 @@ interface ServerDatabaseDao {
     )
     suspend fun getServerCurrentAddress(serverId: String): ServerAddress?
 
+    @Query("UPDATE servers SET currentServerAddressId = :addressId WHERE id = :serverId")
+    suspend fun updateServerCurrentAddress(serverId: String, addressId: UUID)
+
+    @Query(
+        "UPDATE servers SET autoSwitchAddress = :enabled, localAddressId = :localAddressId, externalAddressId = :externalAddressId, localWifiSsids = :localWifiSsids WHERE id = :serverId",
+    )
+    suspend fun updateServerNetworkConfig(
+        serverId: String,
+        enabled: Boolean,
+        localAddressId: UUID?,
+        externalAddressId: UUID?,
+        localWifiSsids: String,
+    )
+
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertMovie(movie: FindroidMovieDto)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

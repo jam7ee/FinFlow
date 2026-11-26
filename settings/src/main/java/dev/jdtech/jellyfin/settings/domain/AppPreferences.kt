@@ -28,6 +28,7 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     // Player
     val playerBackend = Preference("pref_player_backend", "exoplayer")
     val playerBrightness = Preference("pref_player_brightness", -1.0f)
+    val playerMaxBitrateLocal = Preference("pref_player_max_bitrate_local", "0")
     val playerMaxBitrateWifi = Preference("pref_player_max_bitrate_wifi", "0")
     val playerMaxBitrateMobile = Preference("pref_player_max_bitrate_mobile", "0")
 

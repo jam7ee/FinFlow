@@ -396,6 +396,15 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                                             listOf(
                                                 PreferenceSelect(
                                                     nameStringResource =
+                                                        R.string.pref_player_max_bitrate_local,
+                                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                                    backendPreference =
+                                                        appPreferences.playerMaxBitrateLocal,
+                                                    options = R.array.max_bitrate,
+                                                    optionValues = R.array.max_bitrate_values,
+                                                ),
+                                                PreferenceSelect(
+                                                    nameStringResource =
                                                         R.string.pref_player_max_bitrate_wifi,
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                                     backendPreference =
