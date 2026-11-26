@@ -87,4 +87,3 @@ class BitrateSelectionDialogFragment(private val viewModel: PlayerViewModel) : D
         }
     }
 }
-

@@ -229,10 +229,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         mediaSourceIndex: Int?,
     ): FindroidSource {
         return if (mediaSourceId != null) {
-            val remote =
-                mediaSources.firstOrNull {
-                    it.id == mediaSourceId && it.type == FindroidSourceType.REMOTE
-                }
+            val remote = mediaSources.firstOrNull {
+                it.id == mediaSourceId && it.type == FindroidSourceType.REMOTE
+            }
             val any = mediaSources.firstOrNull { it.id == mediaSourceId }
             remote ?: any ?: mediaSources[0]
         } else if (mediaSourceIndex == null) {
