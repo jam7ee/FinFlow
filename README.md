@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="images/finflow-banner.png" alt="FinFlow" width="520" />
+</p>
+
 # FinFlow
 
 ![GitHub release](https://img.shields.io/github/v/release/jam7ee/FinFlow?style=for-the-badge)
