@@ -301,14 +301,20 @@ private fun PullToSwitchSettingsButton(
 
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    if (event.type == PointerEventType.Cancel) {
-                                        wasCancelled = true
-                                        break
-                                    }
                                     val change =
                                         event.changes.firstOrNull { it.id == down.id }
                                             ?: event.changes.firstOrNull()
-                                    if (change == null || !change.pressed) {
+                                    if (change == null) {
+                                        wasCancelled = true
+                                        break
+                                    }
+                                    if (!change.pressed) {
+                                        if (
+                                            change.isConsumed ||
+                                                event.type != PointerEventType.Release
+                                        ) {
+                                            wasCancelled = true
+                                        }
                                         break
                                     }
 
