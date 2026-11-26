@@ -1,27 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-  <group android:scaleX="0.056557618"
-      android:scaleY="0.056557618"
-      android:translateX="25.0425"
-      android:translateY="25.0425">
+    <!-- Outer Jellyfin rounded triangle ring -->
     <path
-        android:pathData="m586.76,542.3 l25.39,-43.97c3.53,-6.1 -5.62,-11.39 -9.15,-5.29l-25.71,44.52c-19.66,-8.97 -41.74,-13.97 -65.29,-13.97 -23.56,0 -45.63,5 -65.29,13.97l-25.7,-44.52c-3.52,-6.1 -12.67,-0.82 -9.15,5.28l25.39,43.98c-43.59,23.71 -73.41,67.84 -77.77,119.98L664.53,662.28C660.16,610.14 630.35,566.01 586.76,542.3m-74.71,-405.8c-99.41,0 -419.26,580 -370.53,677.95 48.74,97.96 692.8,96.83 741.05,0 48.25,-96.83 -271.12,-677.95 -370.53,-677.95zM754.92,729.57c-31.63,63.42 -453.64,64.23 -485.59,0C237.38,665.34 447.01,285.29 512.04,285.29c65.04,0 274.51,380.69 242.88,444.28z"
-        android:strokeWidth="0.23938">
-      <aapt:attr name="android:fillColor">
-        <gradient 
-            android:startY="479.77658"
-            android:startX="363.41766"
-            android:endY="702.5666"
-            android:endX="749.3077"
-            android:type="linear">
-          <item android:offset="0" android:color="@color/logo_primary"/>
-          <item android:offset="1" android:color="@color/logo_secondary"/>
-        </gradient>
-      </aapt:attr>
-    </path>
-  </group>
+        android:fillColor="#0A0A0A"
+        android:fillType="evenOdd"
+        android:pathData="M54,28.5 C47.3,28.5 26.0,66.8 29.2,73.2 C32.4,79.6 75.6,79.6 78.8,73.2 C82.0,66.8 60.7,28.5 54,28.5 Z M54,38.8 C58.3,38.8 72.1,63.3 70.0,67.5 C67.9,71.7 40.1,71.7 38.0,67.5 C35.9,63.3 49.7,38.8 54,38.8 Z" />
+    <!-- Minimalist Android dome -->
+    <path
+        android:fillColor="#0A0A0A"
+        android:pathData="M44.6,65.8 A9.4,9.4 0 0,1 63.4,65.8 Q54,67.2 44.6,65.8 Z" />
+    <!-- Rounded pill antennae -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0A0A0A"
+        android:strokeWidth="2.1"
+        android:strokeLineCap="round"
+        android:pathData="M50.0,57.5 L47.9,53.4 M58.0,57.5 L60.1,53.4" />
 </vector>
